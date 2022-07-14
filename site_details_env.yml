@@ -12,3 +12,4 @@ dependencies:
   - python=3.8.12
   - pytz
   - timezonefinder
+  - spyder-kernels=2.0.5
