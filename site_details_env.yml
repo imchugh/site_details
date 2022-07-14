@@ -1,0 +1,14 @@
+name: site_details
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - gspread
+  - numpy
+  - oauth2client
+  - openpyxl
+  - pandas
+  - pathlib
+  - python
+  - pytz
+  - timezonefinder
