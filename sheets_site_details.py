@@ -155,7 +155,8 @@ class site_details():
         path : str
             Outut path for excel spreadsheet.
         subset_cols : list, optional
-            List of columns to output to file. The default is SUBSET_LIST.
+            List of columns to output to file. The default is SUBSET_LIST. If
+            None, False or an empty list is passed, all columns will be output.
         operational_sites_only : Boolean, optional
             Drop non-operational sites. The default is True.
 
@@ -172,7 +173,10 @@ class site_details():
         if not subset_cols:
             df.to_excel(path)
             return
-        cols = [x for x in subset_cols if x in df.columns]
+        if subset_cols:
+            cols = [x for x in subset_cols if x in df.columns]
+        else:
+            cols = df.columns
         df.to_excel(path, columns=cols, index_label='Site')    
         
     def get_operational_sites(self):
