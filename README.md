@@ -9,4 +9,4 @@ While the sheet is unrestricted access for viewing, the user requires a Google s
   2) enable the Sheets and Drive APIs
   3) generate a json security key (which must reside in the root repository directory and be named 'client_secrets.json') 
 
-A useful description of how to create the service account and generate keys can be found here: https://pyshark.com/google-sheets-api-using-python/
+A useful description of how to create the service account and generate keys can be found here (see 'Creating Google API credentials'): https://pyshark.com/google-sheets-api-using-python/
