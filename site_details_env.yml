@@ -9,6 +9,6 @@ dependencies:
   - openpyxl
   - pandas
   - pathlib
-  - python
+  - python=3.8.12
   - pytz
   - timezonefinder

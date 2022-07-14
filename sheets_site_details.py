@@ -21,9 +21,8 @@ import pdb
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-CRED_DIR = '/home/unimelb.edu.au/imchugh/Code/Python/Py3_6/Sheets'
 CRED_FILE = 'client_secrets.json'
-KEY = '19RUT2otvKF6sgk-ShxZHlSJSJyl74QMBMi6runm4Bd8'
+SHEET_KEY = '19RUT2otvKF6sgk-ShxZHlSJSJyl74QMBMi6runm4Bd8'
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
@@ -76,12 +75,11 @@ def _get_frame_from_sheets(use_alias=True):
 
     """
     
-    cred_path = pathlib.Path(CRED_DIR) / CRED_FILE
     credentials = (
-        ServiceAccountCredentials.from_json_keyfile_name(cred_path, SCOPES)
+        ServiceAccountCredentials.from_json_keyfile_name(CRED_FILE, SCOPES)
         )
     file = gspread.authorize(credentials)
-    book = file.open_by_key(key=KEY)
+    book = file.open_by_key(key=SHEET_KEY)
     sheet = book.worksheet(title='Flux Towers')
     df = pd.DataFrame(sheet.get_all_records())
     df.replace('', np.nan, inplace=True)
@@ -196,7 +194,3 @@ class site_details():
 #------------------------------------------------------------------------------        
 
 #------------------------------------------------------------------------------
-
-if __name__=='__main__':
-    
-    cl = site_details()
