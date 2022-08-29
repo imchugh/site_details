@@ -21,7 +21,7 @@ import pdb
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-CRED_FILE = 'client_secrets.json'
+CRED_FILE = pathlib.Path(__file__).parent / 'client_secrets.json'
 SHEET_KEY = '19RUT2otvKF6sgk-ShxZHlSJSJyl74QMBMi6runm4Bd8'
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
