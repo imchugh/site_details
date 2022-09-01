@@ -7,6 +7,7 @@ Created on Thu Jun 30 17:55:20 2022
 """
 
 import datetime as dt
+import ephem
 import gspread
 import numpy as np
 from oauth2client.service_account import ServiceAccountCredentials
@@ -34,7 +35,7 @@ ALIAS_DICT = {'Alpine Peatland': 'Alpine Peat',
               'Longreach Mitchell Grass Rangeland': 'Longreach',
               'Nimmo High Plains': 'Nimmo',
               'Samford Ecological Research Facility': 'Samford'}
-SUBSET_LIST = ['latitude', 'longitude', 'elevation', 'time_zone', 'GMT_zone',
+SUBSET_LIST = ['latitude', 'longitude', 'elevation', 'time_zone', 'UTC_offset',
                'date_commissioned', 'date_decommissioned', 'is_decommissioned']
 
 # See below for complete column list
@@ -48,7 +49,7 @@ SUBSET_LIST = ['latitude', 'longitude', 'elevation', 'time_zone', 'GMT_zone',
 #                'collaborator_organizations', 'project_manager',
 #                'principal_investigator', 'technician', 'data_manager', 
 #                'collaborators',
-#                'time_zone', 'GMT_zone']
+#                'time_zone', 'UTC_offset']
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -89,7 +90,7 @@ def _get_frame_from_sheets(use_alias=True):
     df.index = [''.join(x.split(' ')) for x in df.new_name]
     df.drop(['name', 'new_name'], axis=1, inplace=True)
     df = df.assign(time_zone = _get_timezones(df))
-    df = df.assign(GMT_zone = _get_GMT_offset(df))
+    df = df.assign(UTC_offset = _get_UTC_offset(df))
     df['is_decommissioned'] = df.is_decommissioned=='TRUE'
     return df
 #------------------------------------------------------------------------------
@@ -114,7 +115,7 @@ def _get_timezones(df):
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-def _get_GMT_offset(df):
+def _get_UTC_offset(df):
     
     """Get the UTC offset (local standard time)"""
     
@@ -144,7 +145,8 @@ class site_details():
     def __init__(self, use_alias=True):
         
         self.df = _get_frame_from_sheets(use_alias=use_alias)
-        
+
+    #--------------------------------------------------------------------------        
     def export_to_excel(self, path, subset_cols=SUBSET_LIST, 
                         operational_sites_only=True):
         
@@ -177,8 +179,10 @@ class site_details():
             cols = [x for x in subset_cols if x in df.columns]
         else:
             cols = df.columns
-        df.to_excel(path, columns=cols, index_label='Site')    
-        
+        df.to_excel(path, columns=cols, index_label='Site')
+    #--------------------------------------------------------------------------
+    
+    #--------------------------------------------------------------------------    
     def get_operational_sites(self):
         
         """
@@ -194,7 +198,135 @@ class site_details():
         return (
             self.df[~self.df.is_decommissioned].drop(
                 ['date_decommissioned', 'is_decommissioned'], axis=1)
-            )         
+            )
+    #--------------------------------------------------------------------------
+    
+    #--------------------------------------------------------------------------
+    def _get_sunrise_sunset(
+            self, site, date, state, which='next', utc=False, default_elev=100
+            ):
+        """
+        Retrieve sunrise and sunset times from ephem.
+
+        Parameters
+        ----------
+        site : str
+            Site name.
+        date : pydatetime
+            The datetime for which to generate sunrise / sunset.
+        state : str
+            Determines whether to retrieve sunrise or sunset.
+        which : str, optional
+            Determines whether to retrieve previous or next sunrise or sunset.
+        utc : bool, optional
+            Determines whether to retrieve utc or local time. The default is 
+            False.
+        default_elev : float or int, optional
+            Elevation to use if the documented site elevation is absent. The 
+            default is 100.
+
+        Raises
+        ------
+        KeyError
+            Raised if 'state' parameter is not either sunrise or sunset, or 
+            'which' parameter is not either previous or next.
+        TypeError
+            Raised if documented latitude or longitude is absent.
+
+        Returns
+        -------
+        pydatetime
+            Requested sunrise or sunset time.
+
+        """
+        
+        if not state in ['sunrise', 'sunset']:
+            raise KeyError('"state" arg must be either sunrise or sunset')
+        if not which in ['previous', 'next']:
+            raise KeyError('"which" arg must be either last or next')
+        
+        obs = ephem.Observer()
+        obs.lat = self.df.loc[site, 'latitude']
+        if np.isnan(obs.lat):
+            raise TypeError('Site latitude is empty!')
+        obs.long = self.df.loc[site, 'longitude']
+        if np.isnan(obs.lon):
+            raise TypeError('Site latitude is empty!')
+        obs.elev = self.df.loc[site, 'elevation']
+        if np.isnan(obs.elev):
+            print('Site latitude is empty!')
+            obs.elev = default_elev
+        obs.date = date
+        sun = ephem.Sun()
+        sun.compute(obs)
+        utc_offset = dt.timedelta(hours=self.df.loc[site, 'UTC_offset'])
+
+        if state == 'sunrise':
+            if which == 'next':
+                out_date = obs.next_rising(sun).datetime()
+            else:
+                out_date = obs.previous_rising(sun).datetime()
+        else:
+            if which == 'next':
+                out_date = obs.next_setting(sun).datetime()
+            else:
+                out_date = obs.previous_setting(sun).datetime()
+        if utc:
+            return out_date
+        return out_date + utc_offset
+    #--------------------------------------------------------------------------
+    
+    #--------------------------------------------------------------------------
+    def get_sunrise(self, site, date, which='previous'):
+        """
+        Get sunrise for the site and date.
+
+        Parameters
+        ----------
+        site : str
+            Site name.
+        date : pydatetime
+            The datetime for which to generate sunrise.
+        which : str, optional
+            Determines whether to retrieve previous or next sunrise.
+            
+        Returns
+        -------
+        pydatetime
+            Requested sunrise.
+
+        """
+        
+        return self._get_sunrise_sunset(
+            site=site, date=date, state='sunrise', which=which
+            )
+    #--------------------------------------------------------------------------
+
+    #--------------------------------------------------------------------------
+    def get_sunset(self, site, date, which='next', utc=False):
+        """
+        Get sunset for the site and date.
+
+        Parameters
+        ----------
+        site : str
+            Site name.
+        date : pydatetime
+            The datetime for which to generate sunset.
+        which : str, optional
+            Determines whether to retrieve previous or next sunset.
+            
+        Returns
+        -------
+        pydatetime
+            Requested sunset.
+
+        """        
+        return self._get_sunrise_sunset(
+            site=site, date=date, state='sunset', which=which, utc=utc
+            )
+    #--------------------------------------------------------------------------
+
 #------------------------------------------------------------------------------        
 
 #------------------------------------------------------------------------------
