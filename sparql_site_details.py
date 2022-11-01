@@ -33,7 +33,7 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX tern-loc: <https://w3id.org/tern/ontologies/loc/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT ?id ?label ?fluxnet_id ?date_commissioned ?date_decommissioned ?latitude ?longitude ?elevation ?time_step
+SELECT ?id ?label ?fluxnet_id ?date_commissioned ?date_decommissioned ?latitude ?longitude ?elevation ?time_step ?freq_hz
 WHERE {
     ?id a tern:FluxTower ;
         rdfs:label ?label ;
@@ -54,10 +54,16 @@ WHERE {
         }
     }
     OPTIONAL {
-        ?id tern:hasAttribute ?attribute .
-        ?attribute tern:attribute <http://linked.data.gov.au/def/tern-cv/ca60779d-4c00-470c-a6b6-70385753dff1> ;
-                   tern:hasSimpleValue ?time_step .
+        ?id tern:hasAttribute ?time_step_attr .
+        ?time_step_attr tern:attribute <http://linked.data.gov.au/def/tern-cv/ca60779d-4c00-470c-a6b6-70385753dff1> ;
+            tern:hasSimpleValue ?time_step .
     }
+    OPTIONAL {
+        ?id tern:hasAttribute ?freq_hz_attr .
+        ?freq_hz_attr tern:attribute <http://linked.data.gov.au/def/tern-cv/ce39d9fd-ef90-4540-881d-5b9e779d9842> ;
+            tern:hasSimpleValue ?freq_hz .
+    }
+    
 }
 ORDER BY ?label
 """
@@ -209,6 +215,10 @@ def make_df():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
+### CLASSES ###
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
 class site_details():
     
     """Class to retrieve site data from SPARQL endpoint"""
@@ -260,6 +270,12 @@ class site_details():
             .drop('date_decommissioned', axis=1)
             )
     #--------------------------------------------------------------------------
+
+    #--------------------------------------------------------------------------
+    def get_single_site_details(self, site):
+        
+        return self.df.loc[site]
+    #--------------------------------------------------------------------------
     
     #--------------------------------------------------------------------------
     def _get_sunrise_sunset(
@@ -306,10 +322,10 @@ class site_details():
             raise KeyError('"which" arg must be either last or next')
         
         obs = ephem.Observer()
-        obs.lat = self.df.loc[site, 'latitude']
+        obs.lat = str(self.df.loc[site, 'latitude'])
         if np.isnan(obs.lat):
             raise TypeError('Site latitude is empty!')
-        obs.long = self.df.loc[site, 'longitude']
+        obs.long = str(self.df.loc[site, 'longitude'])
         if np.isnan(obs.lon):
             raise TypeError('Site latitude is empty!')
         obs.elev = self.df.loc[site, 'elevation']
@@ -337,7 +353,7 @@ class site_details():
     #--------------------------------------------------------------------------
     
     #--------------------------------------------------------------------------
-    def get_sunrise(self, site, date, which='previous'):
+    def get_sunrise(self, site, date, which='previous', utc=False):
         """
         Get sunrise for the site and date.
 
@@ -358,7 +374,7 @@ class site_details():
         """
         
         return self._get_sunrise_sunset(
-            site=site, date=date, state='sunrise', which=which
+            site=site, date=date, state='sunrise', which=which, utc=utc
             )
     #--------------------------------------------------------------------------
 
