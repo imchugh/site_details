@@ -40,13 +40,13 @@ WHERE {
         tern:fluxnetID ?fluxnet_id .
 
     OPTIONAL {
-        ?id tern:dateCommissioned ?date_commissioned .        
+        ?id tern:dateCommissioned ?date_commissioned .
     }
     OPTIONAL {
         ?id tern:dateDecommissioned ?date_decommissioned .
     }
     OPTIONAL {
-        ?id geosparql:hasGeometry ?geo .        
+        ?id geosparql:hasGeometry ?geo .
         ?geo wgs:lat ?latitude ;
              wgs:long ?longitude .
         OPTIONAL {
@@ -63,7 +63,7 @@ WHERE {
         ?freq_hz_attr tern:attribute <http://linked.data.gov.au/def/tern-cv/ce39d9fd-ef90-4540-881d-5b9e779d9842> ;
             tern:hasSimpleValue ?freq_hz .
     }
-    
+
 }
 ORDER BY ?label
 """
@@ -77,7 +77,7 @@ ALIAS_DICT = {'Alpine Peatland': 'Alpine Peat',
               'Samford Ecological Research Facility': 'Samford'}
 
 HEADERS = {
-    "content-type": "application/sparql-query", 
+    "content-type": "application/sparql-query",
     "accept": "application/sparql-results+json"
     }
 #------------------------------------------------------------------------------
@@ -89,13 +89,13 @@ HEADERS = {
 #------------------------------------------------------------------------------
 def _get_timezones(df):
     """Get the timezone (as region/city)"""
-    
+
     tf = TimezoneFinder()
     tz_list = []
     for site in df.index:
-        try: 
+        try:
             tz = tf.timezone_at(
-                lng=df.loc[site, 'longitude'], 
+                lng=df.loc[site, 'longitude'],
                 lat=df.loc[site, 'latitude']
                 )
         except ValueError:
@@ -107,7 +107,7 @@ def _get_timezones(df):
 #------------------------------------------------------------------------------
 def _get_UTC_offset(df):
     """Get the UTC offset (local standard time)"""
-    
+
     offset_list = []
     date = dt.datetime.now()
     for site in df.index:
@@ -124,8 +124,8 @@ def _get_UTC_offset(df):
 
 #------------------------------------------------------------------------------
 def _parse_dates(date):
-    """Return the passed date string in pydtetime format"""    
-    
+    """Return the passed date string in pydtetime format"""
+
     DATE_FORMATS = ['%Y-%m-%d', '%d/%m/%Y']
     try:
         return dt.datetime.strptime(date, DATE_FORMATS[0])
@@ -133,12 +133,12 @@ def _parse_dates(date):
         return dt.datetime.strptime(date, DATE_FORMATS[1])
     except TypeError:
         return None
-#------------------------------------------------------------------------------    
+#------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 def _parse_floats(float_str):
     """Return float or int as appropriate"""
-    
+
     try:
         the_float = float(float_str)
         if int(the_float) == the_float:
@@ -148,10 +148,10 @@ def _parse_floats(float_str):
         return np.nan
 #------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------    
+#------------------------------------------------------------------------------
 def _parse_labels(label):
     """Format site name"""
-    
+
     new_label = label.replace(' Flux Station', '')
     try:
         out_label = ALIAS_DICT[new_label]
@@ -187,7 +187,7 @@ def make_df():
                   'latitude': _parse_floats,
                   'longitude': _parse_floats,
                   'elevation': _parse_floats,
-                  'time_step': _parse_floats}    
+                  'time_step': _parse_floats}
 
     response = requests.post(SPARQL_ENDPOINT, data=SPARQL_QUERY, headers=HEADERS)
     if response.status_code != 200:
@@ -220,16 +220,16 @@ def make_df():
 
 #------------------------------------------------------------------------------
 class site_details():
-    
+
     """Class to retrieve site data from SPARQL endpoint"""
-    
+
     def __init__(self, use_alias=True):
-        
+
         self.df = make_df()
 
-    #--------------------------------------------------------------------------        
+    #--------------------------------------------------------------------------
     def export_to_excel(self, path, operational_sites_only=True):
-        
+
         """
 
         Parameters
@@ -244,17 +244,17 @@ class site_details():
         None.
 
         """
-        
+
         if operational_sites_only:
             df = self.get_operational_sites()
         else:
             df = self.df
         df.to_excel(path, index_label='Site')
     #--------------------------------------------------------------------------
-    
-    #--------------------------------------------------------------------------    
+
+    #--------------------------------------------------------------------------
     def get_operational_sites(self):
-        
+
         """
         Get the operational subset of sites.
 
@@ -264,7 +264,7 @@ class site_details():
             Dataframe containing information only for operational sites.
 
         """
-        
+
         return (
             self.df[pd.isnull(self.df.date_decommissioned)]
             .drop('date_decommissioned', axis=1)
@@ -272,11 +272,13 @@ class site_details():
     #--------------------------------------------------------------------------
 
     #--------------------------------------------------------------------------
-    def get_single_site_details(self, site):
-        
-        return self.df.loc[site]
+    def get_single_site_details(self, site, field=None):
+
+        if not field:
+            return self.df.loc[site]
+        return self.df.loc[site, field]
     #--------------------------------------------------------------------------
-    
+
     #--------------------------------------------------------------------------
     def _get_sunrise_sunset(
             self, site, date, state, which='next', utc=False, default_elev=100
@@ -295,16 +297,16 @@ class site_details():
         which : str, optional
             Determines whether to retrieve previous or next sunrise or sunset.
         utc : bool, optional
-            Determines whether to retrieve utc or local time. The default is 
+            Determines whether to retrieve utc or local time. The default is
             False.
         default_elev : float or int, optional
-            Elevation to use if the documented site elevation is absent. The 
+            Elevation to use if the documented site elevation is absent. The
             default is 100.
 
         Raises
         ------
         KeyError
-            Raised if 'state' parameter is not either sunrise or sunset, or 
+            Raised if 'state' parameter is not either sunrise or sunset, or
             'which' parameter is not either previous or next.
         TypeError
             Raised if documented latitude or longitude is absent.
@@ -315,12 +317,12 @@ class site_details():
             Requested sunrise or sunset time.
 
         """
-        
+
         if not state in ['sunrise', 'sunset']:
             raise KeyError('"state" arg must be either sunrise or sunset')
         if not which in ['previous', 'next']:
             raise KeyError('"which" arg must be either last or next')
-        
+
         obs = ephem.Observer()
         obs.lat = str(self.df.loc[site, 'latitude'])
         if np.isnan(obs.lat):
@@ -351,7 +353,7 @@ class site_details():
             return out_date
         return out_date + utc_offset
     #--------------------------------------------------------------------------
-    
+
     #--------------------------------------------------------------------------
     def get_sunrise(self, site, date, which='previous', utc=False):
         """
@@ -365,14 +367,14 @@ class site_details():
             The datetime for which to generate sunrise.
         which : str, optional
             Determines whether to retrieve previous or next sunrise.
-            
+
         Returns
         -------
         pydatetime
             Requested sunrise.
 
         """
-        
+
         return self._get_sunrise_sunset(
             site=site, date=date, state='sunrise', which=which, utc=utc
             )
@@ -391,16 +393,16 @@ class site_details():
             The datetime for which to generate sunset.
         which : str, optional
             Determines whether to retrieve previous or next sunset.
-            
+
         Returns
         -------
         pydatetime
             Requested sunset.
 
-        """        
+        """
         return self._get_sunrise_sunset(
             site=site, date=date, state='sunset', which=which, utc=utc
             )
     #--------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------        
+#------------------------------------------------------------------------------
