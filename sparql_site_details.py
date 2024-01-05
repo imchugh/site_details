@@ -74,7 +74,9 @@ ALIAS_DICT = {'Alpine Peatland': 'Alpine Peat',
               'Dargo High Plains': 'Dargo',
               'Longreach Mitchell Grass Rangeland': 'Longreach',
               'Nimmo High Plains': 'Nimmo',
-              'Samford Ecological Research Facility': 'Samford'}
+              'Samford Ecological Research Facility': 'Samford',
+              'Wellington Research Station Flux Tower': 'Wellington'
+              }
 
 HEADERS = {
     "content-type": "application/sparql-query",
