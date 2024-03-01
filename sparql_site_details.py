@@ -69,6 +69,7 @@ ORDER BY ?label
 """
 # LIMIT 2
 ALIAS_DICT = {'Alpine Peatland': 'Alpine Peat',
+              'Aqueduct Snow Gum': 'SnowGum',
               'ArcturusEmerald': 'Emerald',
               'Calperum Chowilla': 'Calperum',
               'Dargo High Plains': 'Dargo',
@@ -255,7 +256,7 @@ class site_details():
     #--------------------------------------------------------------------------
 
     #--------------------------------------------------------------------------
-    def get_operational_sites(self):
+    def get_operational_sites(self, site_name_only=False):
 
         """
         Get the operational subset of sites.
@@ -267,10 +268,13 @@ class site_details():
 
         """
 
-        return (
+        df = (
             self.df[pd.isnull(self.df.date_decommissioned)]
             .drop('date_decommissioned', axis=1)
             )
+        if not site_name_only:
+            return df
+        return df.index.tolist()
     #--------------------------------------------------------------------------
 
     #--------------------------------------------------------------------------
